@@ -23,7 +23,7 @@ An impulse response convolver VST3 plugin featuring pre-loaded profiles from Pri
 
 ```bash
 # Clone the project
-git clone <repo-url>
+git clone [(https://github.com/JackieAlacrity2373/Can_damonium)]
 cd Can_damonium
 
 # Add JUCE as a submodule (if not already present)
