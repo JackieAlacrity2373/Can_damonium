@@ -257,7 +257,7 @@ void PluginProcessor::loadPresetProfile (const juce::String& profileName)
     juce::File irFile = resourceDir.getChildFile (fileName);
     
     DBG("  Final IR path: " + irFile.getFullPathName());
-    DBG("  File exists: " + juce::String(irFile.existsAsFile()));
+    DBG("  File exists: " + juce::String(irFile.existsAsFile() ? "true" : "false"));
     
     if (irFile.existsAsFile())
     {

@@ -67,9 +67,9 @@ private:
         const char* name;
     };
     static constexpr CanSize canSizes[3] = {
-        {360, 280, "Small"},
+        {360, 550, "Small"},      // Fixed height, variable width
         {700, 550, "Regular"},
-        {870, 685, "Large"}
+        {870, 550, "Large"}
     };
     
     // Pringles flavor data

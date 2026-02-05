@@ -90,7 +90,7 @@ void IRLibraryManager::addKnownIRs()
 
     for (const auto& file : candidates)
     {
-        DBG("  Checking: " + file.getFullPathName() + " (exists: " + juce::String(file.existsAsFile()) + ")");
+        DBG("  Checking: " + file.getFullPathName() + " (exists: " + juce::String(file.existsAsFile() ? "true" : "false") + ")");
         addIfValid (file);
     }
 

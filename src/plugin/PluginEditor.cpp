@@ -184,98 +184,105 @@ void PluginEditor::rebuildLayout()
     DBG("  irStatusLabel: " + juce::String(irStatusLabel ? "OK" : "NULL"));
     DBG("  irSelector: " + juce::String(irSelector ? "OK" : "NULL"));
     
+    // Fixed layout with variable width - all sizes now have fixed height of 550px
+    int y = 5;
+    int xMargin = isSmall ? 8 : 15;
+    int titleFontSize = isSmall ? 14 : 20;
+    int titleHeight = isSmall ? 22 : 35;
+    
+    // TITLE
+    statusLabel->setFont(juce::Font(static_cast<float>(titleFontSize), juce::Font::bold));
+    statusLabel->setBounds(xMargin, y, w - xMargin * 2, titleHeight);
+    y += titleHeight + 5;
+    
     if (isSmall)
     {
-        // COMPACT LAYOUT FOR SMALL CANS (360×280)
-        int y = 5;
-        int xMargin = 8;
-        int colWidth = (w - xMargin * 2) / 2;
-        
-        // Smaller title
-        statusLabel->setFont (juce::Font (14.0f, juce::Font::bold));
-        statusLabel->setBounds (xMargin, y, w - xMargin * 2, 22);
-        y += 25;
-        
+        // SMALL LAYOUT (360px width)
         // Color palette icon (small) + Size selector on one row
-        canFlavorSelector->setBounds (xMargin, y, 32, 28);  // Tiny square (palette icon area)
-        canSizeSelector->setBounds (xMargin + 35, y, colWidth - 35, 28);
+        canFlavorSelector->setBounds(xMargin, y, 32, 28);
+        canSizeSelector->setBounds(xMargin + 35, y, w - xMargin * 2 - 35, 28);
         y += 32;
         
         // Hide verbose status labels in small mode
         irStatusLabel->setFont(juce::Font(10.0f));
-        irStatusLabel->setBounds (xMargin, y, w - xMargin * 2, 16);
+        irStatusLabel->setBounds(xMargin, y, w - xMargin * 2, 16);
         y += 18;
         
-        // Hide sample rate and audio status (too verbose for small)
         sampleRateLabel->setVisible(false);
         audioStatusLabel->setVisible(false);
         
         // IR selector (compact)
-        irSelector->setBounds (xMargin, y, w - xMargin * 2 - 32, 26);
-        irLoadButton->setBounds (w - xMargin - 28, y, 26, 26);
+        irSelector->setBounds(xMargin, y, w - xMargin * 2 - 32, 26);
+        irLoadButton->setBounds(w - xMargin - 28, y, 26, 26);
         y += 30;
         
-        // Reload button
+        // Control buttons
         int buttonH = 24;
         int buttonGap = 2;
         
-        reloadIRButton->setBounds (xMargin, y, w - xMargin * 2, buttonH);
+        reloadIRButton->setBounds(xMargin, y, w - xMargin * 2, buttonH);
         y += buttonH + buttonGap;
         
-        audioSettingsButton->setBounds (xMargin, y, w - xMargin * 2, buttonH);
-        y += buttonH + buttonGap + 20;  // Add extra space to move buttons lower
+        audioSettingsButton->setBounds(xMargin, y, w - xMargin * 2, buttonH);
+        y += buttonH + buttonGap + 20;
         
-        // Bypass and Tone buttons lower to avoid overlap
-        bypassButton->setBounds (xMargin, y, (colWidth - buttonGap) / 2, buttonH);
-        testToneButton->setBounds (xMargin + (colWidth - buttonGap) / 2 + buttonGap, y, (colWidth - buttonGap) / 2, buttonH);
-        testToneButton->setButtonText("Tone");  // Abbreviated for space
+        // Bypass and Tone buttons
+        int halfWidth = (w - xMargin * 2 - buttonGap) / 2;
+        bypassButton->setBounds(xMargin, y, halfWidth, buttonH);
+        testToneButton->setBounds(xMargin + halfWidth + buttonGap, y, halfWidth, buttonH);
+        testToneButton->setButtonText("Tone");
     }
     else
     {
-        // REGULAR LAYOUT FOR REGULAR/LARGE CANS
-        int y = 5;
-        int xMargin = 15;
+        // REGULAR/LARGE LAYOUT (700px+ width)
         int colWidth = (w - xMargin * 2 - 20) / 2;
         
-        // Full title
-        statusLabel->setFont (juce::Font (20.0f, juce::Font::bold));
-        statusLabel->setBounds (xMargin, y, w - xMargin * 2, 35);
-        y += 40;
-        
-        // Flavor (with palette icon indicator) + Size selector
-        canFlavorSelector->setBounds (xMargin, y, colWidth, 30);
-        canSizeSelector->setBounds (xMargin + colWidth + 15, y, colWidth, 30);
+        // Flavor + Size selector on same row
+        canFlavorSelector->setBounds(xMargin, y, colWidth, 30);
+        canSizeSelector->setBounds(xMargin + colWidth + 15, y, colWidth, 30);
         y += 35;
         
-        // Status labels
+        // Status labels - all visible in regular/large
         irStatusLabel->setFont(juce::Font(14.0f));
-        irStatusLabel->setBounds (xMargin, y, w - xMargin * 2, 25);
+        irStatusLabel->setBounds(xMargin, y, w - xMargin * 2, 25);
         y += 28;
         
         sampleRateLabel->setVisible(true);
         sampleRateLabel->setFont(juce::Font(12.0f));
-        sampleRateLabel->setBounds (xMargin, y, w - xMargin * 2, 20);
+        sampleRateLabel->setBounds(xMargin, y, w - xMargin * 2, 20);
         y += 23;
         
         audioStatusLabel->setVisible(true);
         audioStatusLabel->setFont(juce::Font(12.0f));
-        audioStatusLabel->setBounds (xMargin, y, w - xMargin * 2, 20);
+        audioStatusLabel->setBounds(xMargin, y, w - xMargin * 2, 20);
         y += 23;
         
         // IR selector row
-        irSelector->setBounds (xMargin + 55, y, w - xMargin * 2 - 100, 30);
-        irLoadButton->setBounds (w - xMargin - 40, y, 30, 30);
+        irSelector->setBounds(xMargin + 55, y, w - xMargin * 2 - 100, 30);
+        irLoadButton->setBounds(w - xMargin - 40, y, 30, 30);
         y += 35;
         
-        // Control buttons
-        int buttonW = (w - xMargin * 2 - 10) / 3;
+        // Control buttons - adapt to width
+        int buttonGap = 5;
+        int availableWidth = w - xMargin * 2;
+        int buttonH = 30;
         
-        reloadIRButton->setBounds (xMargin, y, buttonW, 35);
-        bypassButton->setBounds (xMargin + buttonW + 5, y, buttonW, 30);
-        bypassButton->setBounds (xMargin + buttonW + 5, y, 120, 30);
-        testToneButton->setBounds (xMargin + buttonW + 130, y, 150, 30);
-        testToneButton->setButtonText("Test Tone: OFF");  // Full text
-        audioSettingsButton->setBounds (w - xMargin - 120, y, 120, 30);
+        // For wider screens, distribute buttons better
+        if (w >= 700)
+        {
+            // Wider layout: Reload | Bypass | Test Tone | Audio Settings
+            int buttonW = (availableWidth - buttonGap * 3) / 4;
+            reloadIRButton->setBounds(xMargin, y, buttonW, buttonH);
+            bypassButton->setBounds(xMargin + buttonW + buttonGap, y, 120, buttonH);
+            testToneButton->setBounds(xMargin + buttonW + 120 + buttonGap * 2, y, 150, buttonH);
+            testToneButton->setButtonText("Test Tone: OFF");
+            audioSettingsButton->setBounds(w - xMargin - 120, y, 120, buttonH);
+        }
+        else
+        {
+            // Fallback for edge cases
+            reloadIRButton->setBounds(xMargin, y, availableWidth, buttonH);
+        }
     }
 }
 
