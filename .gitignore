@@ -1,0 +1,89 @@
+# Build directories
+build/
+out/
+cmake_build_debug/
+cmake_build_release/
+Builds/
+.jucer
+
+# JUCE generated files
+JuceLibraryCode/
+
+# IDE and editor files
+.vscode/
+.vs/
+*.sln
+*.vcxproj*
+*.vcxproj
+*.vcxproj.filters
+.idea/
+*.iml
+*.sublime-workspace
+*.code-workspace
+
+# Build artifacts
+*.o
+*.obj
+*.lib
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.res
+
+# CMake
+CMakeCache.txt
+cmake_install.cmake
+CMakeFiles/
+*.cmake
+Makefile
+CTestTestfile.cmake
+
+# OS specific
+.DS_Store
+Thumbs.db
+.directory
+desktop.ini
+.AppleDouble
+.LSOverride
+
+# Temporary/Log files
+*.tmp
+*.temp
+*.log
+*.err
+*.out
+logs/
+*.swp
+*.swo
+*~
+.~*
+
+# Audio/IR files (large)
+*.wav
+*.flac
+*.mp3
+*.aiff
+*.aif
+*.m4a
+
+# User-specific
+DEVICE_NOTES.md
+resources/impulse_responses/user/
+pring_Reg/
+
+# Dependencies
+node_modules/
+venv/
+.env
+
+# Profiler and debug outputs
+profile_*.txt
+perf_*.data
+*.dmp
+*.core
+crash_dump/
