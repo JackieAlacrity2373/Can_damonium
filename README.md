@@ -95,10 +95,10 @@ cmake --build . --config Release
 - [x] Test signal generator (logarithmic chirp, 20Hz-20kHz)
 - [x] WAV file I/O (save 48kHz, 24-bit recordings to disk)
 - [x] Recording pipeline (capture → validate → trim → normalize → save)
-- [ ] Build and test the recorder application
-- [ ] **Record Regular Pringles Can IR** (MVP - one profile)
-- [ ] **Build MVP VST3 plugin** (1 IR, convolver only)
-- [ ] **Test MVP plugin in DAW** (end-to-end validation)
+- [x] Build and test the recorder application
+- [x] **Record Regular Pringles Can IR** (MVP - one profile)
+- [x] **Build MVP VST3 plugin** (1 IR, convolver only)
+- [x] **Test MVP plugin in DAW** (end-to-end validation)
 - [ ] Record Small & Grande IR profiles (Phase 3)
 - [ ] Expand plugin to 3-profile selector (Phase 3)
 
