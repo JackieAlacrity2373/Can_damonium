@@ -215,19 +215,20 @@ void PluginEditor::rebuildLayout()
         irLoadButton->setBounds (w - xMargin - 28, y, 26, 26);
         y += 30;
         
-        // Button row (stacked vertically, smaller)
+        // Reload button
         int buttonH = 24;
         int buttonGap = 2;
         
         reloadIRButton->setBounds (xMargin, y, w - xMargin * 2, buttonH);
         y += buttonH + buttonGap;
         
+        audioSettingsButton->setBounds (xMargin, y, w - xMargin * 2, buttonH);
+        y += buttonH + buttonGap + 20;  // Add extra space to move buttons lower
+        
+        // Bypass and Tone buttons lower to avoid overlap
         bypassButton->setBounds (xMargin, y, (colWidth - buttonGap) / 2, buttonH);
         testToneButton->setBounds (xMargin + (colWidth - buttonGap) / 2 + buttonGap, y, (colWidth - buttonGap) / 2, buttonH);
         testToneButton->setButtonText("Tone");  // Abbreviated for space
-        y += buttonH + buttonGap;
-        
-        audioSettingsButton->setBounds (xMargin, y, w - xMargin * 2, buttonH);
     }
     else
     {
@@ -372,13 +373,9 @@ void PluginEditor::paint (juce::Graphics& g)
         g.drawRect (meterBounds);
     };
 
-    auto meter1 = juce::Rectangle<int> (meterArea.getX(), meterArea.getY(), meterArea.getWidth(), meterHeight);
-    auto meter2 = meter1.translated (0, meterHeight + meterGap);
-    auto meter3 = meter2.translated (0, meterHeight + meterGap);
-
-    drawMeter (meter1, "Input", inputMeter);
-    drawMeter (meter2, "Conv", convolutionMeter);
-    drawMeter (meter3, "Out", outputMeter);
+    // Draw only the convolution (2nd) meter
+    auto meterRect = juce::Rectangle<int> (meterArea.getX(), meterArea.getY(), meterArea.getWidth(), meterHeight);
+    drawMeter (meterRect, "Conv Output", convolutionMeter);
 }
 
 void PluginEditor::resized()
