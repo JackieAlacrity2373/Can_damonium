@@ -402,15 +402,22 @@ void PluginEditor::timerCallback()
     inputMeter = toMeter (processor.getInputLevel());
     convolutionMeter = toMeter (processor.getConvolutionLevel());
     outputMeter = toMeter (processor.getOutputLevel());
-
-    if (irStatusLabel)
+    
+    // Only update IR status if it changed
+    static bool lastIRLoaded = false;
+    if (irStatusLabel && processor.isIrLoaded() != lastIRLoaded)
     {
-        irStatusLabel->setText (processor.isIrLoaded() ? "IR Status: Loaded" : "IR Status: Not loaded",
+        lastIRLoaded = processor.isIrLoaded();
+        irStatusLabel->setText (lastIRLoaded ? "IR Status: Loaded" : "IR Status: Not loaded",
                                 juce::NotificationType::dontSendNotification);
     }
 
-    if (sampleRateLabel)
+    // Only update sample rate label every few frames (less frequently)
+    static int updateCounter = 0;
+    if (++updateCounter >= 5 && sampleRateLabel)  // Update every ~167ms instead of ~33ms
     {
+        updateCounter = 0;
+        
         auto sr = processor.getCurrentSampleRateHz();
         auto bs = processor.getCurrentBlockSize();
         auto callbacks = processor.getAudioCallbackCount();
@@ -418,24 +425,19 @@ void PluginEditor::timerCallback()
         auto layoutIn = processor.getLastLayoutInputs();
         auto layoutOut = processor.getLastLayoutOutputs();
 
-        auto text = (sr > 0.0)
-            ? ("Sample Rate: " + juce::String (sr, 0) + " Hz  |  Block: " + juce::String (bs)
-               + "  |  Callbacks: " + juce::String (static_cast<long long> (callbacks))
-               + "  |  prepareToPlay: " + juce::String (prepCount)
-               + "  |  Layout: " + juce::String (layoutIn) + "->" + juce::String (layoutOut))
-            : (juce::String ("Sample Rate: -- Hz  |  Block: --  |  Callbacks: 0")
-               + "  |  prepareToPlay: " + juce::String (prepCount)
-               + "  |  Layout: " + juce::String (layoutIn) + "->" + juce::String (layoutOut));
-
-        sampleRateLabel->setText (text, juce::NotificationType::dontSendNotification);
-
-        if (audioStatusLabel)
+        // Only update if sample rate is active
+        if (sr > 0.0)
         {
-            if (hostServices)
-                audioStatusLabel->setText ("Audio: " + hostServices->getAudioDeviceStatus(), 
-                                           juce::NotificationType::dontSendNotification);
-            else
-                audioStatusLabel->setText ("Audio: VST3 mode", juce::NotificationType::dontSendNotification);
+            auto text = "Sample Rate: " + juce::String (sr, 0) + " Hz  |  Block: " + juce::String (bs)
+                       + "  |  Callbacks: " + juce::String (static_cast<long long> (callbacks));
+            sampleRateLabel->setText (text, juce::NotificationType::dontSendNotification);
+
+            if (audioStatusLabel)
+            {
+                if (hostServices)
+                    audioStatusLabel->setText ("Audio: " + hostServices->getAudioDeviceStatus(), 
+                                               juce::NotificationType::dontSendNotification);
+            }
         }
         
         // Refresh IR list on first audio (sample rate > 0)
@@ -443,7 +445,7 @@ void PluginEditor::timerCallback()
         if (sr > 0.0 && !refreshedOnce)
         {
             refreshedOnce = true;
-            DBG("First audio detected, refreshing IR list...");
+            juce::Logger::writeToLog("First audio detected, refreshing IR list...");
             refreshIRList();
         }
     }
