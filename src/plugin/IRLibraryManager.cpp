@@ -127,6 +127,38 @@ const IRLibraryManager::IREntry* IRLibraryManager::getDefaultIR() const
     return availableIRs.isEmpty() ? nullptr : &availableIRs[0];
 }
 
+juce::Array<IRLibraryManager::IREntry> IRLibraryManager::getIRsByCanSize (const juce::String& canSize) const
+{
+    juce::Array<IREntry> filtered;
+    
+    // Map can size selector names to IR filename patterns
+    juce::String pattern;
+    if (canSize.containsIgnoreCase("Small"))
+        pattern = "Small";
+    else if (canSize.containsIgnoreCase("Regular"))
+        pattern = "Regular";
+    else if (canSize.containsIgnoreCase("Large") || canSize.containsIgnoreCase("Grande"))
+        pattern = "Grande";
+    
+    // Filter IRs that match the can size pattern in their filename
+    for (const auto& ir : availableIRs)
+    {
+        if (ir.name.containsIgnoreCase(pattern))
+        {
+            filtered.add(ir);
+        }
+    }
+    
+    // If no IRs found for this size, return all IRs (fallback)
+    if (filtered.isEmpty())
+    {
+        DBG("No IRs found for can size: " + canSize + ", returning all IRs");
+        return availableIRs;
+    }
+    
+    return filtered;
+}
+
 void IRLibraryManager::addCustomIR (const juce::File& irFile)
 {
     if (irFile.existsAsFile() && irFile.getFileExtension().toLowerCase() == ".wav")

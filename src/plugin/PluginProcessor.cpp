@@ -10,6 +10,7 @@ PluginProcessor::PluginProcessor()
 {
     DBG("=== PluginProcessor CONSTRUCTOR START ===");
     convolutionEngine = std::make_unique<ConvolutionEngine>();
+    convolutionEngine->setIrResampleEnabled(true);
     DBG("=== PluginProcessor CONSTRUCTOR END - ConvolutionEngine created ===");
 }
 

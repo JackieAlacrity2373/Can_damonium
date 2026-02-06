@@ -3,54 +3,6 @@
 #include <JuceHeader.h>
 
 /**
- * IR buffer with sample rate info - passed between threads
- */
-struct IRBufferWithSampleRate
-{
-    IRBufferWithSampleRate() = default;
-    
-    IRBufferWithSampleRate(juce::AudioBuffer<float>&& buf, double sr, int channels)
-        : buffer(std::move(buf)), sampleRate(sr), numChannels(channels) {}
-    
-    juce::AudioBuffer<float> buffer;
-    double sampleRate = 0.0;
-    int numChannels = 0;
-};
-
-/**
- * Thread-safe IR buffer transfer using spinlock
- * UI thread queues new IR, audio thread loads it (non-blocking)
- */
-class IRBufferTransfer
-{
-public:
-    void set(IRBufferWithSampleRate&& buf)
-    {
-        const juce::SpinLock::ScopedLockType lock(mutex);
-        buffer = std::move(buf);
-        newBuffer = true;
-    }
-    
-    // Call fn with new buffer if available (non-blocking try-lock)
-    template <typename Fn>
-    void get(Fn&& fn)
-    {
-        const juce::SpinLock::ScopedTryLockType lock(mutex);
-        
-        if (lock.isLocked() && newBuffer)
-        {
-            fn(buffer);
-            newBuffer = false;
-        }
-    }
-    
-private:
-    IRBufferWithSampleRate buffer;
-    bool newBuffer = false;
-    juce::SpinLock mutex;
-};
-
-/**
  * Manages impulse response files and convolution operations
  */
 class ConvolutionEngine
@@ -68,12 +20,15 @@ public:
     
     void setBypass (bool shouldBypass) noexcept { bypass.store(shouldBypass); }
     bool isBypassed() const noexcept { return bypass.load(); }
+
+    void setIrResampleEnabled (bool enabled) noexcept { resampleIrToDevice.store(enabled); }
+    bool isIrResampleEnabled() const noexcept { return resampleIrToDevice.load(); }
     
     // Deferred IR loading: Store IR to load on next prepareToPlay or processBlock
     void setDeferredIRLoad (const juce::File& irFile) noexcept { deferredIRFile = irFile; }
     
-    // Queue an IR buffer for loading on audio thread (via BufferTransfer)
-    void queueIRBuffer(IRBufferWithSampleRate&& buf) noexcept { bufferTransfer.set(std::move(buf)); }
+    // Signal that we need to reset the convolver's buffers after IR load
+    void signalIRChange() noexcept { needsReset.store(true); }
 
 private:
     juce::dsp::Convolution convolver;
@@ -84,11 +39,10 @@ private:
     std::atomic<bool> irLoaded { false }; // Indicates if an impulse response is loaded
     std::atomic<bool> bypass { false }; // Bypass convolution processing
     std::atomic<bool> isPrepared { false }; // Flag: convolver is already prepared
+    std::atomic<bool> needsReset { false }; // Flag: reset convolver buffers on next processBlock
+    std::atomic<bool> resampleIrToDevice { true }; // Resample IR to device sample rate on load
     juce::String lastLoadedIRPath; // Track which IR is loaded to prevent reloading same file
     juce::File deferredIRFile; // IR to load after prepareToPlay is called
-    
-    // Thread-safe IR buffer queue (UI thread adds, audio thread consumes)
-    IRBufferTransfer bufferTransfer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ConvolutionEngine)
 };

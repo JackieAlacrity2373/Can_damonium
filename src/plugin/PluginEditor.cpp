@@ -156,6 +156,14 @@ void PluginEditor::createUIComponents()
     testToneButton->setToggleState (false, juce::NotificationType::dontSendNotification);
     addAndMakeVisible (*testToneButton);
     DBG("  Test tone button added");
+
+    // IR resample toggle
+    resampleIrButton = std::make_unique<juce::ToggleButton> ("IR Resample: ON");
+    resampleIrButton->addListener (this);
+    resampleIrButton->setToggleState (processor.isIrResampleEnabled(), juce::NotificationType::dontSendNotification);
+    addAndMakeVisible (*resampleIrButton);
+    resampleIrButton->setButtonText(processor.isIrResampleEnabled() ? "IR Resample: ON" : "IR Resample: OFF");
+    DBG("  IR resample toggle added");
     
     // Audio Settings button - opens JUCE's AudioDeviceSelectorComponent
     audioSettingsButton = std::make_unique<juce::TextButton> ("Audio Settings");
@@ -175,7 +183,9 @@ void PluginEditor::rebuildLayout()
 {
     int w = getWidth();
     int h = getHeight();
-    bool isSmall = (w <= 400);
+    // Use current can size to determine layout instead of width
+    // This ensures consistent layout regardless of manual resizing
+    bool isSmall = (currentCanSize == 0);
     
     DBG("rebuildLayout() - Size: " + juce::String(w) + "x" + juce::String(h) + " (isSmall=" + juce::String(isSmall ? "true" : "false") + ")");
     DBG("  statusLabel: " + juce::String(statusLabel ? "OK" : "NULL"));
@@ -206,14 +216,18 @@ void PluginEditor::rebuildLayout()
         // Hide verbose status labels in small mode
         irStatusLabel->setFont(juce::Font(10.0f));
         irStatusLabel->setBounds(xMargin, y, w - xMargin * 2, 16);
+        irStatusLabel->setVisible(true);
         y += 18;
         
         sampleRateLabel->setVisible(false);
         audioStatusLabel->setVisible(false);
         
-        // IR selector (compact)
-        irSelector->setBounds(xMargin, y, w - xMargin * 2 - 32, 26);
-        irLoadButton->setBounds(w - xMargin - 28, y, 26, 26);
+        // IR selector (compact) - ensure always visible
+        int irSelectorWidth = juce::jmax(100, w - xMargin * 2 - 32);
+        irSelector->setBounds(xMargin, y, irSelectorWidth, 26);
+        irSelector->setVisible(true);
+        irLoadButton->setBounds(xMargin + irSelectorWidth + 2, y, 26, 26);
+        irLoadButton->setVisible(true);
         y += 30;
         
         // Control buttons
@@ -231,6 +245,10 @@ void PluginEditor::rebuildLayout()
         bypassButton->setBounds(xMargin, y, halfWidth, buttonH);
         testToneButton->setBounds(xMargin + halfWidth + buttonGap, y, halfWidth, buttonH);
         testToneButton->setButtonText("Tone");
+        y += buttonH + buttonGap;
+
+        // IR resample toggle
+        resampleIrButton->setBounds(xMargin, y, w - xMargin * 2, buttonH);
     }
     else
     {
@@ -257,9 +275,13 @@ void PluginEditor::rebuildLayout()
         audioStatusLabel->setBounds(xMargin, y, w - xMargin * 2, 20);
         y += 23;
         
-        // IR selector row
-        irSelector->setBounds(xMargin + 55, y, w - xMargin * 2 - 100, 30);
-        irLoadButton->setBounds(w - xMargin - 40, y, 30, 30);
+        // IR selector row - ensure width never goes negative
+        int irSelectorWidth = juce::jmax(150, w - xMargin * 2 - 100);
+        int irSelectorX = xMargin + (w - xMargin * 2 - irSelectorWidth - 35) / 2; // Center if narrower than expected
+        irSelector->setBounds(irSelectorX, y, irSelectorWidth, 30);
+        irSelector->setVisible(true);
+        irLoadButton->setBounds(irSelectorX + irSelectorWidth + 5, y, 30, 30);
+        irLoadButton->setVisible(true);
         y += 35;
         
         // Control buttons - adapt to width
@@ -270,18 +292,25 @@ void PluginEditor::rebuildLayout()
         // For wider screens, distribute buttons better
         if (w >= 700)
         {
-            // Wider layout: Reload | Bypass | Test Tone | Audio Settings
-            int buttonW = (availableWidth - buttonGap * 3) / 4;
+            // Wider layout: Reload | Bypass | Test Tone | IR Resample | Audio Settings
+            int buttonW = (availableWidth - buttonGap * 4) / 5;
             reloadIRButton->setBounds(xMargin, y, buttonW, buttonH);
-            bypassButton->setBounds(xMargin + buttonW + buttonGap, y, 120, buttonH);
-            testToneButton->setBounds(xMargin + buttonW + 120 + buttonGap * 2, y, 150, buttonH);
+            bypassButton->setBounds(xMargin + buttonW + buttonGap, y, buttonW, buttonH);
+            testToneButton->setBounds(xMargin + (buttonW + buttonGap) * 2, y, buttonW, buttonH);
+            resampleIrButton->setBounds(xMargin + (buttonW + buttonGap) * 3, y, buttonW, buttonH);
             testToneButton->setButtonText("Test Tone: OFF");
-            audioSettingsButton->setBounds(w - xMargin - 120, y, 120, buttonH);
+            audioSettingsButton->setBounds(xMargin + (buttonW + buttonGap) * 4, y, buttonW, buttonH);
         }
         else
         {
-            // Fallback for edge cases
+            // Narrower layout - stack buttons vertically
             reloadIRButton->setBounds(xMargin, y, availableWidth, buttonH);
+            y += buttonH + buttonGap;
+            bypassButton->setBounds(xMargin, y, availableWidth / 2 - buttonGap/2, buttonH);
+            testToneButton->setBounds(xMargin + availableWidth / 2 + buttonGap/2, y, availableWidth / 2 - buttonGap/2, buttonH);
+            y += buttonH + buttonGap;
+            resampleIrButton->setBounds(xMargin, y, availableWidth / 2 - buttonGap/2, buttonH);
+            audioSettingsButton->setBounds(xMargin + availableWidth / 2 + buttonGap/2, y, availableWidth / 2 - buttonGap/2, buttonH);
         }
     }
 }
@@ -562,6 +591,13 @@ void PluginEditor::buttonClicked(juce::Button* button)
         processor.setTestToneEnabled(isEnabled);
         testToneButton->setButtonText(isEnabled ? "Test Tone: ON" : "Test Tone: OFF");
     }
+    else if (button == resampleIrButton.get())
+    {
+        bool isEnabled = resampleIrButton->getToggleState();
+        DBG("=== IR RESAMPLE TOGGLED: " << (isEnabled ? "ON" : "OFF") << " ===");
+        processor.setIrResampleEnabled(isEnabled);
+        resampleIrButton->setButtonText(isEnabled ? "IR Resample: ON" : "IR Resample: OFF");
+    }
 }
 
 void PluginEditor::comboBoxChanged (juce::ComboBox* comboBoxThatHasChanged)
@@ -662,8 +698,40 @@ void PluginEditor::updateCanSize(int sizeIndex)
     DBG("Can size changed to: " + juce::String(newSize.name) + 
         " (" + juce::String(newSize.width) + "x" + juce::String(newSize.height) + ")");
     
-    // Resize the window
-    setSize(newSize.width, newSize.height);
+    // All IRs are available in all UI sizes - no filtering
+    // (IR selection is independent of can size UI)
+    
+    // Auto-resize on first selection of Small or Large (one-time feature)
+    bool shouldAutoResize = false;
+    
+    if (sizeIndex == 0 && !smallCanResizedOnce)
+    {
+        smallCanResizedOnce = true;
+        shouldAutoResize = true;
+        DBG("First Small selection - auto-resizing");
+    }
+    else if (sizeIndex == 2 && !largeCanResizedOnce)
+    {
+        largeCanResizedOnce = true;
+        shouldAutoResize = true;
+        DBG("First Large selection - auto-resizing");
+    }
+    
+    if (shouldAutoResize)
+    {
+        // Resize on first selection of Small or Large
+        setSize(newSize.width, newSize.height);
+    }
+    else if (sizeIndex == 1)
+    {
+        // Regular size can always resize
+        setSize(newSize.width, newSize.height);
+    }
+    else
+    {
+        // For subsequent Small/Large selections, just update layout without resizing
+        resized();
+    }
 }
 
 juce::Colour PluginEditor::getCurrentFlavorColor() const

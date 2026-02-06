@@ -45,6 +45,11 @@ RecorderComponent::RecorderComponent()
     stopButton->setEnabled (false);
     addAndMakeVisible (*stopButton);
 
+    moreIRsButton = std::make_unique<juce::TextButton> ("MORE IRs");
+    moreIRsButton->addListener (this);
+    moreIRsButton->setEnabled (true);
+    addAndMakeVisible (*moreIRsButton);
+
     // Status display
     statusLabel = std::make_unique<juce::Label> ("Status", "Ready");
     addAndMakeVisible (*statusLabel);
@@ -146,12 +151,31 @@ void RecorderComponent::resized()
     auto buttonRow = bounds.removeFromBottom (40);
     auto statusRow = bounds;
 
-    // Buttons
+    // Buttons - layout depends on current step
     auto btnWidth = 100;
-    backButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
-    nextButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
-    recordButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
-    stopButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
+    
+    if (currentStep == InstructionPanel::Step::Complete)
+    {
+        // Show only nextButton (renamed to "NEW RECORDING") and moreIRsButton on Complete step
+        nextButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
+        moreIRsButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
+        moreIRsButton->setVisible (true);
+        backButton->setVisible (false);
+        recordButton->setVisible (false);
+        stopButton->setVisible (false);
+    }
+    else
+    {
+        // Normal step navigation
+        backButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
+        nextButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
+        recordButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
+        stopButton->setBounds (buttonRow.removeFromLeft (btnWidth).reduced (5));
+        moreIRsButton->setVisible (false);
+        backButton->setVisible (true);
+        recordButton->setVisible (true);
+        stopButton->setVisible (true);
+    }
 
     // Status area
     statusLabel->setBounds (statusRow.removeFromTop (15).reduced (5));
@@ -291,6 +315,20 @@ void RecorderComponent::buttonClicked (juce::Button* button)
         backButton->setEnabled (true);
 
         statusLabel->setText ("Recording stopped.", juce::dontSendNotification);
+    }
+    else if (button == moreIRsButton.get())
+    {
+        // Reset to Setup step to record another IR
+        currentStep = InstructionPanel::Step::Setup;
+        instructionPanel->setCurrentStep (currentStep);
+        nextButton->setButtonText ("NEXT");
+        nextButton->setEnabled (true);
+        backButton->setEnabled (false);
+        recordButton->setEnabled (false);
+        stopButton->setEnabled (false);
+        statusLabel->setText ("Ready to record another IR", juce::dontSendNotification);
+        resized();
+        repaint();
     }
 }
 

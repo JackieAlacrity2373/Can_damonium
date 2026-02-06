@@ -49,6 +49,7 @@ private:
     std::unique_ptr<juce::TextButton> reloadIRButton;
     std::unique_ptr<juce::ToggleButton> bypassButton;
     std::unique_ptr<juce::ToggleButton> testToneButton;
+    std::unique_ptr<juce::ToggleButton> resampleIrButton;
     std::unique_ptr<juce::TextButton> audioSettingsButton;
     std::unique_ptr<juce::FileChooser> irFileChooser;
 
@@ -59,6 +60,8 @@ private:
     // Can selection state
     int currentCanFlavor = 0;
     int currentCanSize = 1; // 0=Small (360x280), 1=Regular (700x550), 2=Large (870x685)
+    bool smallCanResizedOnce = false; // Track if Small auto-resize has been triggered
+    bool largeCanResizedOnce = false; // Track if Large auto-resize has been triggered
     
     // Can sizing data
     struct CanSize {
@@ -79,12 +82,12 @@ private:
     };
     static constexpr FlavorInfo flavors[10] = {
         {"Original", 0xCC0000},                 // Bright Red
-        {"Sour Cream & Onion", 0x228B22},       // Forest Green
+        {"Sour Cream & Onion", 0x9ACD32},       // Lime Green
         {"Cheddar Cheese", 0xFFB612},           // Golden Orange-Yellow
         {"Jalapeño", 0x3CB371},                 // Medium Sea Green
         {"Salt & Vinegar", 0x0066CC},           // Bright Blue
-        {"BBQ", 0x8B4513},                      // Saddle Brown
-        {"Screamin' Dill Pickle", 0x20B2AA},    // Light Sea Green/Teal
+        {"BBQ", 0x6B2D63},                      // Dark Purple
+        {"Screamin' Dill Pickle", 0x1A4D2D},    // Pine Forest Green
         {"Grilled Shrimp", 0xFF7F50},           // Coral/Salmon Pink
         {"Seaweed", 0x1B4D2E},                  // Dark Forest Green
         {"Soft-Shell Crab", 0x663399},          // Slate Blue/Purple

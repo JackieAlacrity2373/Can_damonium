@@ -79,13 +79,13 @@ juce::String InstructionPanel::getConfigurationInstructions() const
 Verify your audio interface settings:
 
 INPUT (Microphone):
-✓ Sample Rate: 48,000 Hz (48 kHz)
+✓ Sample Rate: 96,000 Hz (96 kHz)
 ✓ Bit Depth: 24-bit
 ✓ Input Level: -12dB to -6dB (aim for strong signal without clipping)
 ✓ Channel: Mono
 
 OUTPUT (Test Signal):
-✓ Sample Rate: 48,000 Hz (48 kHz)
+✓ Sample Rate: 96,000 Hz (96 kHz)
 ✓ Bit Depth: 24-bit
 ✓ Output Level: -3dBFS (app-controlled)
 ✓ Channel: Mono or Stereo (mono preferred)
@@ -136,7 +136,7 @@ juce::String InstructionPanel::getProcessingInstructions() const
 The recorded impulse response is being processed...
 
 PROCESSING STEPS:
-1. Validating file format (48 kHz, 24-bit)
+1. Validating file format (96 kHz, 24-bit)
 2. Analyzing decay envelope
 3. Trimming to appropriate length
 4. Normalizing level to -3 dBFS

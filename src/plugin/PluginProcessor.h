@@ -55,6 +55,12 @@ public:
     bool isIrLoaded() const noexcept { return convolutionEngine != nullptr && convolutionEngine->isIrLoaded(); }
     double getCurrentSampleRateHz() const noexcept { return currentSampleRateHz.load(); }
     int getCurrentBlockSize() const noexcept { return currentBlockSize.load(); }
+    
+    // Get IRs filtered by can size
+    juce::Array<IRLibraryManager::IREntry> getFilteredIRsByCanSize (const juce::String& canSize) const noexcept
+    {
+        return const_cast<IRLibraryManager&>(irLibrary).getIRsByCanSize(canSize);
+    }
 
     //==============================================================================
     // Bypass control
@@ -67,6 +73,17 @@ public:
     bool isConvolutionBypassed() const noexcept
     {
         return convolutionEngine ? convolutionEngine->isBypassed() : false;
+    }
+
+    void setIrResampleEnabled (bool enabled) noexcept
+    {
+        if (convolutionEngine)
+            convolutionEngine->setIrResampleEnabled(enabled);
+    }
+
+    bool isIrResampleEnabled() const noexcept
+    {
+        return convolutionEngine ? convolutionEngine->isIrResampleEnabled() : false;
     }
     
     //==============================================================================

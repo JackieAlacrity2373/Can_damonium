@@ -31,6 +31,9 @@ public:
     // Find IR by name
     const IREntry* findIRByName (const juce::String& name) const;
     
+    // Get IRs matching a specific can size
+    juce::Array<IREntry> getIRsByCanSize (const juce::String& canSize) const;
+    
     // Get default IR
     const IREntry* getDefaultIR() const;
     

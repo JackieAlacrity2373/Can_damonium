@@ -44,6 +44,7 @@ private:
     std::unique_ptr<juce::TextButton> backButton;
     std::unique_ptr<juce::TextButton> recordButton;
     std::unique_ptr<juce::TextButton> stopButton;
+    std::unique_ptr<juce::TextButton> moreIRsButton;
     std::unique_ptr<juce::Label> statusLabel;
     std::unique_ptr<juce::Label> levelMeterLabel;
     juce::ProgressBar progressBar;

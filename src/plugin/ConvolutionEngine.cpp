@@ -1,5 +1,32 @@
 #include "ConvolutionEngine.h"
 
+namespace
+{
+    juce::AudioBuffer<float> resampleIrBuffer(const juce::AudioBuffer<float>& input,
+                                              double sourceSampleRate,
+                                              double targetSampleRate)
+    {
+        const int inputSamples = input.getNumSamples();
+        const int channels = input.getNumChannels();
+        const double ratio = sourceSampleRate / targetSampleRate;
+        const int outputSamples = static_cast<int>(std::ceil(inputSamples / ratio));
+
+        juce::AudioBuffer<float> output(channels, outputSamples);
+
+        for (int ch = 0; ch < channels; ++ch)
+        {
+            juce::LagrangeInterpolator resampler;
+            resampler.reset();
+            resampler.process(ratio,
+                              input.getReadPointer(ch),
+                              output.getWritePointer(ch),
+                              outputSamples);
+        }
+
+        return output;
+    }
+}
+
 ConvolutionEngine::ConvolutionEngine()
 {
     DBG("=== ConvolutionEngine CONSTRUCTOR ===");
@@ -61,19 +88,14 @@ void ConvolutionEngine::processBlock (juce::AudioBuffer<float>& buffer)
     static int processCallCount = 0;
     processCallCount++;
     
-    // CHECK FOR NEW IR EVERY BLOCK (audio thread, non-blocking via try-lock)
-    // This is the key difference from the previous implementation
-    bufferTransfer.get([this](IRBufferWithSampleRate& irBuf)
-    {
-        juce::Logger::writeToLog(">>> Processing new IR buffer on audio thread (block #" + juce::String(processCallCount) + ")");
-        convolver.loadImpulseResponse(std::move(irBuf.buffer),
-                                       irBuf.sampleRate,
-                                       irBuf.numChannels == 2 ? juce::dsp::Convolution::Stereo::yes : juce::dsp::Convolution::Stereo::no,
-                                       juce::dsp::Convolution::Trim::no,
-                                       juce::dsp::Convolution::Normalise::yes);
-        irLoaded.store(true);
-        juce::Logger::writeToLog(">>> IR loaded successfully on audio thread");
-    });
+    // Don't reset - the JUCE convolver doesn't need reset after IR load
+    // Calling reset clears important internal state
+    // if (needsReset.load())
+    // {
+    //     convolver.reset();
+    //     needsReset.store(false);
+    //     juce::Logger::writeToLog(">>> Convolver reset on audio thread after IR load");
+    // }
     
     // RULE 1: If bypassed OR no IR loaded -> pass audio through unchanged
     // RULE 2: If IR loaded AND not bypassed -> apply convolution
@@ -139,7 +161,7 @@ void ConvolutionEngine::processBlock (juce::AudioBuffer<float>& buffer)
 
 bool ConvolutionEngine::loadImpulseResponse (const juce::File& irFile)
 {
-    juce::Logger::writeToLog("=== ConvolutionEngine::loadImpulseResponse START (file loading, will queue for audio thread) ===");
+    juce::Logger::writeToLog("=== ConvolutionEngine::loadImpulseResponse START ===");
     juce::Logger::writeToLog("  File: " + irFile.getFullPathName());
 
     if (irLoaded.load() && lastLoadedIRPath == irFile.getFullPathName())
@@ -187,18 +209,88 @@ bool ConvolutionEngine::loadImpulseResponse (const juce::File& irFile)
                                      " Hz) != device sample rate (" + juce::String((int)currentSampleRate) +
                                      " Hz)");
             juce::Logger::writeToLog("  For best results, record IRs at your device's native sample rate.");
-            juce::Logger::writeToLog("  JUCE will attempt internal resampling...");
+
+            if (resampleIrToDevice.load())
+            {
+                juce::Logger::writeToLog("  Matching IR to device rate by resampling...");
+
+                irBuffer = resampleIrBuffer(irBuffer, irSampleRate, currentSampleRate);
+                irSampleRate = currentSampleRate;
+
+                juce::Logger::writeToLog("  Resampled IR: " + juce::String(irBuffer.getNumSamples()) +
+                                         " samples at " + juce::String((int)irSampleRate) + " Hz");
+            }
+            else
+            {
+                juce::Logger::writeToLog("  Resample disabled - loading IR at original rate.");
+            }
         }
 
-        juce::Logger::writeToLog("  File loaded - queueing to audio thread via BufferTransfer...");
+        juce::Logger::writeToLog("  File loaded into buffer, now loading into convolver...");
+
+        // Self-test: run a local convolver on a constant signal to verify sustained output
+        // Important: Use the DEVICE sample rate for test, not the IR file sample rate
+        if (currentSampleRate > 0.0 && currentBlockSize > 0)
+        {
+            juce::AudioBuffer<float> irBufferForTest;
+            irBufferForTest.makeCopyOf (irBuffer);
+
+            juce::dsp::Convolution testConvolver;
+            juce::dsp::ProcessSpec testSpec;
+            testSpec.sampleRate = currentSampleRate;  // Use device SR, not file SR
+            testSpec.maximumBlockSize = static_cast<juce::uint32> (currentBlockSize);
+            testSpec.numChannels = static_cast<juce::uint32> (irBuffer.getNumChannels());
+            testConvolver.prepare (testSpec);
+
+            testConvolver.loadImpulseResponse (std::move (irBufferForTest),
+                                               irSampleRate,  // Source IR sample rate  
+                                               irChannels == 2 ? juce::dsp::Convolution::Stereo::yes : juce::dsp::Convolution::Stereo::no,
+                                               juce::dsp::Convolution::Trim::no,
+                                               juce::dsp::Convolution::Normalise::yes);
+
+            juce::AudioBuffer<float> testBlock (irBuffer.getNumChannels(), currentBlockSize);
+
+            for (int i = 0; i < 10; ++i)
+            {
+                testBlock.clear();
+                if (i == 0)
+                {
+                    for (int ch = 0; ch < testBlock.getNumChannels(); ++ch)
+                        testBlock.setSample (ch, 0, 1.0f);
+                }
+
+                juce::dsp::AudioBlock<float> testAudioBlock (testBlock);
+                juce::dsp::ProcessContextReplacing<float> testContext (testAudioBlock);
+                testConvolver.process (testContext);
+
+                float testRms = 0.0f;
+                for (int ch = 0; ch < testBlock.getNumChannels(); ++ch)
+                    testRms = juce::jmax (testRms, testBlock.getRMSLevel (ch, 0, testBlock.getNumSamples()));
+
+                juce::Logger::writeToLog ("  SelfTest block #" + juce::String (i + 1) + " RMS=" + juce::String (testRms, 6));
+            }
+        }
+        else
+        {
+            juce::Logger::writeToLog ("  SelfTest skipped (invalid sample rate/block size)");
+        }
+
+        // Load IR into main convolver
+        convolver.loadImpulseResponse(std::move(irBuffer),
+                          irSampleRate,  // Source IR sample rate
+                          irChannels == 2 ? juce::dsp::Convolution::Stereo::yes : juce::dsp::Convolution::Stereo::no,
+                          juce::dsp::Convolution::Trim::no,
+                          juce::dsp::Convolution::Normalise::yes);
+
+        juce::Logger::writeToLog("  SUCCESS: IR loaded into convolver (" + irFile.getFileName() + ")");
         
-        // Queue the IR buffer for the audio thread to load (non-blocking)
-        queueIRBuffer(IRBufferWithSampleRate(std::move(irBuffer), irSampleRate, irChannels));
+        // Do NOT reset here - let the next processBlock do the reset if needed
         
-        juce::Logger::writeToLog("  Buffer queued - audio thread will load on next processBlock()");
         lastLoadedIRPath = irFile.getFullPathName();
+        irLoaded.store(true);
         
-        juce::Logger::writeToLog("=== ConvolutionEngine::loadImpulseResponse END (SUCCESS - queued) ===");
+        juce::Logger::writeToLog("  irLoaded flag set to: true");
+        juce::Logger::writeToLog("=== ConvolutionEngine::loadImpulseResponse END (SUCCESS) ===");
         return true;
     }
     catch (const std::exception& e)
