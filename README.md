@@ -2,6 +2,11 @@
 
 An impulse response convolver VST3 plugin featuring pre-loaded profiles from Pringles can amplifiers.
 
+## Documentation
+
+- Start here for the fastest path: [docs/START_HERE.md](docs/START_HERE.md)
+- Full doc map and navigation: [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md)
+
 ## Project Structure
 
 - **src/profiler/** - Application for recording standardized IR profiles from equipment (used to create Small/Regular/Grande profiles)
