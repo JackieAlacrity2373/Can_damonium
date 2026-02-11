@@ -34,6 +34,8 @@ JuceLibraryCode/
 *.ilk
 *.exp
 *.res
+*.iobj
+*.ipdb
 
 # CMake
 CMakeCache.txt
